@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dumore Digital Card System</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #080c14;
+    --surface: #0e1520;
+    --surface2: #141e2e;
+    --border: rgba(200,168,75,0.2);
+    --gold: #c8a84b;
+    --gold-light: #e0c06a;
+    --text: #eef2ff;
+    --sub: #7a8fae;
+    --danger: #e84c1e;
+  }
+
+  body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100vh; }
+
+  /* ── NAV ── */
+  .nav {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 32px; height: 60px;
+    background: rgba(8,12,20,0.95); border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 100; backdrop-filter: blur(12px);
+  }
+  .nav-brand { display: flex; align-items: center; gap: 10px; }
+  .nav-brand svg { width: 32px; height: 32px; }
+  .nav-brand-text { font-family: 'Cormorant Garamond', serif; font-size: 18px; font-weight: 700; letter-spacing: 0.08em; color: var(--text); }
+  .nav-tabs { display: flex; gap: 4px; }
+  .nav-tab {
+    padding: 7px 18px; border-radius: 8px; font-size: 13px; font-weight: 500;
+    cursor: pointer; border: 1px solid transparent; transition: all 0.2s;
+    color: var(--sub); background: none;
+  }
+  .nav-tab.active { background: rgba(200,168,75,0.12); border-color: var(--border); color: var(--gold); }
+  .nav-tab:hover:not(.active) { color: var(--text); }
+
+  /* ── VIEWS ── */
+  .view { display: none; }
+  .view.active { display: block; }
+
+  /* ── CREATOR ── */
+  .creator { max-width: 1100px; margin: 0 auto; padding: 36px 24px; }
+  .creator-grid { display: grid; grid-template-columns: 380px 1fr; gap: 32px; align-items: start; }
+
+  .panel {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; padding: 24px; margin-bottom: 16px;
+  }
+  .panel-title {
+    font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--gold); font-weight: 700; margin-bottom: 18px;
+    padding-bottom: 10px; border-bottom: 1px solid var(--border);
+  }
+
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--sub); margin-bottom: 6px; }
+  .field input, .field select, .field textarea {
+    width: 100%; background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px 13px; color: var(--text); font-size: 13px;
+    font-family: 'DM Sans', sans-serif; outline: none; transition: border 0.2s;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--gold); }
+  .field textarea { resize: vertical; min-height: 70px; }
+  .field select option { background: #1a2133; }
+  .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  /* ── PREVIEW SIDE ── */
+  .preview-side { position: sticky; top: 80px; }
+  .preview-label { font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--sub); text-align: center; margin-bottom: 14px; }
+
+  /* ── CARD PREVIEW (phone mockup) ── */
+  .phone-wrap {
+    display: flex; justify-content: center; margin-bottom: 20px;
+  }
+  .phone-shell {
+    width: 260px; background: #0a0d14; border: 2px solid #2a3448;
+    border-radius: 36px; padding: 12px 8px 16px;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.7), inset 0 0 0 1px rgba(255,255,255,0.04);
+    position: relative;
+  }
+  .phone-notch { width: 80px; height: 10px; background: #0a0d14; border-radius: 0 0 8px 8px; margin: 0 auto 8px; border: 2px solid #2a3448; border-top: none; }
+  .phone-screen {
+    background: #0d1220; border-radius: 26px; overflow: hidden;
+    min-height: 480px; position: relative;
+  }
+
+  /* ── PUBLIC CARD (inside phone) ── */
+  .card-page {
+    background: linear-gradient(160deg, #0d1526 0%, #1a2640 50%, #0a0e1a 100%);
+    min-height: 480px; position: relative; overflow: hidden;
+  }
+  .card-hero {
+    background: linear-gradient(135deg, #1a2640, #0d1526);
+    padding: 28px 20px 20px; position: relative;
+    border-bottom: 1px solid rgba(200,168,75,0.15);
+  }
+  .card-hero::after {
+    content: ''; position: absolute; bottom: -1px; left: 0; right: 0; height: 40px;
+    background: linear-gradient(160deg, #0d1526 0%, #1a2640 100%);
+    clip-path: ellipse(55% 100% at 50% 100%);
+  }
+  .card-logo-row { display: flex; align-items: center; gap: 8px; margin-bottom: 20px; }
+  .card-company { font-family: 'Cormorant Garamond', serif; font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); opacity: 0.8; }
+  .card-avatar {
+    width: 64px; height: 64px; border-radius: 50%;
+    border: 2px solid var(--gold); margin: 0 auto 10px;
+    background: #1a2640; display: flex; align-items: center; justify-content: center;
+    font-family: 'Cormorant Garamond', serif; font-size: 24px; font-weight: 700; color: var(--gold);
+    overflow: hidden;
+  }
+  .card-avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .card-name { text-align: center; font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 700; color: var(--text); line-height: 1.2; }
+  .card-title-div { text-align: center; font-size: 10px; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-top: 4px; font-weight: 600; }
+  .card-sub-div { text-align: center; font-size: 9.5px; color: var(--sub); margin-top: 2px; }
+
+  .card-actions { display: flex; gap: 8px; padding: 14px 12px 0; }
+  .card-btn {
+    flex: 1; padding: 9px 6px; border-radius: 10px; font-size: 11px; font-weight: 600;
+    text-align: center; cursor: pointer; letter-spacing: 0.04em;
+    border: 1px solid var(--gold); font-family: 'DM Sans', sans-serif;
+  }
+  .card-btn.primary { background: var(--gold); color: #080c14; }
+  .card-btn.secondary { background: transparent; color: var(--gold); }
+
+  .card-contact { padding: 12px; }
+  .contact-item {
+    display: flex; align-items: center; gap: 10px; padding: 8px 10px;
+    border-radius: 10px; margin-bottom: 4px;
+    background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.04);
+  }
+  .contact-icon {
+    width: 28px; height: 28px; border-radius: 8px;
+    background: rgba(200,168,75,0.1); border: 1px solid rgba(200,168,75,0.2);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .contact-icon svg { width: 13px; height: 13px; stroke: var(--gold); fill: none; stroke-width: 2; stroke-linecap: round; }
+  .contact-text { font-size: 10.5px; color: var(--sub); line-height: 1.3; }
+  .contact-label { font-size: 8.5px; text-transform: uppercase; letter-spacing: 0.08em; color: rgba(122,143,174,0.6); }
+
+  .card-bio { padding: 0 12px 10px; font-size: 10px; color: var(--sub); line-height: 1.5; font-style: italic; text-align: center; border-top: 1px solid var(--border); padding-top: 10px; margin: 0 12px 8px; }
+
+  /* ── QR SECTION ── */
+  .qr-section { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 24px; text-align: center; }
+  .qr-box { display: inline-block; background: #fff; padding: 14px; border-radius: 12px; margin: 14px 0; position: relative; }
+  .qr-box canvas, .qr-box img { display: block; border-radius: 4px; }
+  .qr-url { font-size: 11px; color: var(--sub); word-break: break-all; margin-bottom: 12px; padding: 8px 12px; background: rgba(255,255,255,0.04); border-radius: 8px; border: 1px solid var(--border); font-family: monospace; }
+
+  .btn { padding: 10px 22px; border-radius: 9px; font-size: 13px; font-weight: 600; cursor: pointer; letter-spacing: 0.04em; font-family: 'DM Sans', sans-serif; transition: opacity 0.2s; display: inline-flex; align-items: center; gap: 7px; }
+  .btn-gold { background: var(--gold); color: #080c14; border: none; }
+  .btn-gold:hover { opacity: 0.88; }
+  .btn-outline { background: transparent; color: var(--gold); border: 1.5px solid var(--gold); }
+  .btn-outline:hover { background: rgba(200,168,75,0.08); }
+  .btn-sm { padding: 7px 14px; font-size: 12px; }
+  .btn-row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 10px; }
+
+  .badge {
+    display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 10px;
+    font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+    background: rgba(200,168,75,0.12); color: var(--gold); border: 1px solid var(--border);
+    margin-bottom: 6px;
+  }
+
+  /* ── CARDS LIST ── */
+  .cards-list { max-width: 900px; margin: 0 auto; padding: 36px 24px; }
+  .cards-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; }
+  .page-title { font-family: 'Cormorant Garamond', serif; font-size: 28px; font-weight: 700; color: var(--text); }
+  .page-sub { font-size: 13px; color: var(--sub); margin-top: 3px; }
+  .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+  .card-entry {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    padding: 18px; cursor: pointer; transition: all 0.2s; position: relative;
+  }
+  .card-entry:hover { border-color: var(--gold); transform: translateY(-2px); box-shadow: 0 8px 30px rgba(0,0,0,0.3); }
+  .card-entry-name { font-family: 'Cormorant Garamond', serif; font-size: 18px; font-weight: 700; color: var(--text); }
+  .card-entry-title { font-size: 11px; color: var(--gold); margin-top: 2px; letter-spacing: 0.06em; }
+  .card-entry-div { font-size: 11px; color: var(--sub); margin-top: 1px; }
+  .card-entry-actions { display: flex; gap: 6px; margin-top: 12px; }
+  .card-entry-btn { padding: 5px 12px; border-radius: 7px; font-size: 11px; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; border: 1px solid var(--border); background: rgba(255,255,255,0.04); color: var(--sub); transition: all 0.15s; }
+  .card-entry-btn:hover { color: var(--gold); border-color: var(--gold); }
+  .card-entry-btn.del:hover { color: var(--danger); border-color: var(--danger); }
+  .empty-state { text-align: center; padding: 60px 20px; color: var(--sub); }
+  .empty-state svg { width: 48px; height: 48px; stroke: var(--border); fill: none; stroke-width: 1.5; margin: 0 auto 16px; display: block; }
+
+  /* ── PUBLIC VIEW ── */
+  #public-view {
+    min-height: 100vh;
+    background: linear-gradient(160deg, #0d1526 0%, #1a2640 50%, #0a0e1a 100%);
+    display: flex; flex-direction: column; align-items: center;
+    padding: 0 0 40px;
+  }
+  .pub-nav {
+    width: 100%; padding: 14px 20px; display: flex; align-items: center; gap: 10px;
+    background: rgba(8,12,20,0.7); backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border); margin-bottom: 0;
+  }
+  .pub-card-wrap { width: 100%; max-width: 420px; padding: 0; }
+  .pub-hero {
+    background: linear-gradient(135deg, #1a2640, #0d1526);
+    padding: 40px 28px 32px; position: relative;
+    border-bottom: 1px solid rgba(200,168,75,0.15);
+  }
+  .pub-logo-row { display: flex; align-items: center; gap: 8px; margin-bottom: 28px; }
+  .pub-company { font-family: 'Cormorant Garamond', serif; font-size: 13px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); opacity: 0.85; }
+  .pub-avatar {
+    width: 90px; height: 90px; border-radius: 50%;
+    border: 2.5px solid var(--gold); margin: 0 auto 14px;
+    background: #1a2640; display: flex; align-items: center; justify-content: center;
+    font-family: 'Cormorant Garamond', serif; font-size: 36px; font-weight: 700; color: var(--gold);
+    overflow: hidden; box-shadow: 0 0 0 6px rgba(200,168,75,0.1);
+  }
+  .pub-avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .pub-name { text-align: center; font-family: 'Cormorant Garamond', serif; font-size: 32px; font-weight: 700; color: var(--text); line-height: 1.2; }
+  .pub-title { text-align: center; font-size: 12px; color: var(--gold); letter-spacing: 0.12em; text-transform: uppercase; margin-top: 5px; font-weight: 600; }
+  .pub-div { text-align: center; font-size: 12px; color: var(--sub); margin-top: 4px; }
+  .pub-actions { display: flex; gap: 12px; padding: 20px 20px 0; }
+  .pub-btn {
+    flex: 1; padding: 13px 10px; border-radius: 12px; font-size: 13px; font-weight: 600;
+    text-align: center; cursor: pointer; letter-spacing: 0.04em; font-family: 'DM Sans', sans-serif;
+    border: 1.5px solid var(--gold); transition: all 0.2s;
+  }
+  .pub-btn.primary { background: var(--gold); color: #080c14; }
+  .pub-btn.primary:hover { background: var(--gold-light); }
+  .pub-btn.secondary { background: transparent; color: var(--gold); }
+  .pub-btn.secondary:hover { background: rgba(200,168,75,0.08); }
+  .pub-contact { padding: 16px 20px; }
+  .pub-item {
+    display: flex; align-items: center; gap: 14px; padding: 12px 14px;
+    border-radius: 12px; margin-bottom: 8px; text-decoration: none;
+    background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05);
+    transition: all 0.2s;
+  }
+  .pub-item:hover { background: rgba(200,168,75,0.06); border-color: rgba(200,168,75,0.2); }
+  .pub-icon {
+    width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0;
+    background: rgba(200,168,75,0.1); border: 1px solid rgba(200,168,75,0.2);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .pub-icon svg { width: 17px; height: 17px; stroke: var(--gold); fill: none; stroke-width: 2; stroke-linecap: round; }
+  .pub-item-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--sub); opacity: 0.7; }
+  .pub-item-value { font-size: 14px; color: var(--text); font-weight: 500; margin-top: 1px; }
+  .pub-bio { margin: 0 20px 8px; padding: 14px 16px; background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 12px; font-size: 13px; color: var(--sub); line-height: 1.6; font-style: italic; text-align: center; }
+  .pub-footer { text-align: center; padding-top: 24px; }
+  .pub-footer-logo { display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .pub-footer-text { font-family: 'Cormorant Garamond', serif; font-size: 14px; letter-spacing: 0.1em; color: var(--gold); opacity: 0.6; }
+
+  .divider { height: 1px; background: linear-gradient(90deg, transparent, var(--gold), transparent); opacity: 0.2; margin: 4px 20px; }
+
+  /* ── TOAST ── */
+  .toast {
+    position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: #1a2640; border: 1px solid var(--gold); color: var(--text);
+    padding: 10px 22px; border-radius: 30px; font-size: 13px; font-weight: 500;
+    opacity: 0; transition: all 0.3s; z-index: 9999; white-space: nowrap;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 720px) {
+    .creator-grid { grid-template-columns: 1fr; }
+    .preview-side { position: static; }
+    .nav { padding: 0 16px; }
+    .nav-brand-text { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav" id="main-nav">
+  <div class="nav-brand">
+    <svg viewBox="0 0 36 36" fill="none">
+      <rect x="2" y="2" width="32" height="32" rx="4" stroke="#c8a84b" stroke-width="2"/>
+      <text x="18" y="25" text-anchor="middle" fill="#c8a84b" font-family="serif" font-size="18" font-weight="bold">D</text>
+    </svg>
+    <span class="nav-brand-text">DUMORE CARD SYSTEM</span>
+  </div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showView('creator')">Create Card</button>
+    <button class="nav-tab" onclick="showView('cards')">All Cards</button>
+    <button class="nav-tab" onclick="showView('preview')">Preview Card</button>
+  </div>
+</nav>
+
+<!-- VIEW: CREATOR -->
+<div class="view active" id="view-creator">
+  <div class="creator">
+    <div class="creator-grid">
+
+      <!-- FORM -->
+      <div>
+        <div class="panel">
+          <div class="panel-title">Personal Information</div>
+          <div class="row-2">
+            <div class="field"><label>First Name</label><input id="f-first" oninput="updatePreview()" placeholder="Alex"></div>
+            <div class="field"><label>Last Name</label><input id="f-last" oninput="updatePreview()" placeholder="Jodhan"></div>
+          </div>
+          <div class="field"><label>Job Title</label><input id="f-title" oninput="updatePreview()" placeholder="Chief Executive Officer"></div>
+          <div class="field">
+            <label>Division</label>
+            <select id="f-div" onchange="updatePreview()">
+              <option>Executive / Corporate</option>
+              <option>Oilfield & Industrial Supplies</option>
+              <option>Dutorx Custom Solutions</option>
+              <option>Transport</option>
+              <option>Rentals & Fleet Services</option>
+            </select>
+          </div>
+          <div class="field"><label>Bio / Tagline</label><textarea id="f-bio" oninput="updatePreview()" placeholder="Connecting Trinidad's energy sector with world-class solutions." rows="2"></textarea></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">Contact Details</div>
+          <div class="field"><label>Phone</label><input id="f-phone" oninput="updatePreview()" placeholder="+1 (868) 000-0000"></div>
+          <div class="field"><label>Email</label><input id="f-email" oninput="updatePreview()" placeholder="name@dumoreenterprises.com"></div>
+          <div class="field"><label>Website</label><input id="f-web" oninput="updatePreview()" value="www.dumoreenterprises.com"></div>
+          <div class="field"><label>LinkedIn</label><input id="f-linkedin" oninput="updatePreview()" placeholder="linkedin.com/in/username"></div>
+          <div class="field"><label>Location</label><input id="f-loc" oninput="updatePreview()" value="Port of Spain, Trinidad & Tobago"></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">Photo (optional)</div>
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div id="photo-preview" style="width:52px;height:52px;border-radius:50%;background:#1a2640;border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--gold);overflow:hidden;flex-shrink:0;">?</div>
+            <div>
+              <button class="btn btn-outline btn-sm" onclick="document.getElementById('photo-input').click()">Upload Photo</button>
+              <input type="file" id="photo-input" accept="image/*" style="display:none" onchange="handlePhoto(event)">
+              <div style="font-size:11px;color:var(--sub);margin-top:5px;">JPG, PNG · Square recommended</div>
+            </div>
+          </div>
+        </div>
+
+        <button class="btn btn-gold" style="width:100%;justify-content:center;padding:14px;" onclick="saveCard()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          Save &amp; Generate Card
+        </button>
+      </div>
+
+      <!-- PREVIEW -->
+      <div class="preview-side">
+        <div class="preview-label">Live Preview</div>
+        <div class="phone-wrap">
+          <div class="phone-shell">
+            <div class="phone-notch"></div>
+            <div class="phone-screen">
+              <div class="card-page" id="card-preview-inner">
+                <!-- rendered by JS -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="qr-section" id="qr-panel" style="display:none">
+          <div class="panel-title" style="text-align:center">Card URL &amp; QR Code</div>
+          <div class="badge">Ready to Share</div>
+          <div id="qr-url-display" class="qr-url"></div>
+          <div class="qr-box" id="qr-container"></div>
+          <div style="font-size:11px;color:var(--sub);margin-bottom:12px;">Scan to open · Works on any phone</div>
+          <div class="btn-row">
+            <button class="btn btn-gold btn-sm" onclick="downloadQR()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Download QR
+            </button>
+            <button class="btn btn-outline btn-sm" onclick="copyCardUrl()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+              Copy Link
+            </button>
+          </div>
+          <div style="margin-top:14px;">
+            <button class="btn btn-outline btn-sm" style="width:100%;justify-content:center;" onclick="showPublicView(currentCardId)">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              View Public Card
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- VIEW: CARDS LIST -->
+<div class="view" id="view-cards">
+  <div class="cards-list">
+    <div class="cards-header">
+      <div>
+        <div class="page-title">All Cards</div>
+        <div class="page-sub">Manage Dumore employee digital cards</div>
+      </div>
+      <button class="btn btn-gold" onclick="showView('creator')">+ New Card</button>
+    </div>
+    <div class="cards-grid" id="cards-grid"></div>
+  </div>
+</div>
+
+<!-- VIEW: PREVIEW (simulated public card) -->
+<div class="view" id="view-preview">
+  <div id="public-view">
+    <div class="pub-nav">
+      <svg width="24" height="24" viewBox="0 0 36 36" fill="none">
+        <rect x="2" y="2" width="32" height="32" rx="4" stroke="#c8a84b" stroke-width="2"/>
+        <text x="18" y="25" text-anchor="middle" fill="#c8a84b" font-family="serif" font-size="18" font-weight="bold">D</text>
+      </svg>
+      <span style="font-family:'Cormorant Garamond',serif;font-size:14px;letter-spacing:0.1em;color:var(--gold);">DUMORE ENTERPRISES</span>
+    </div>
+    <div class="pub-card-wrap" id="public-card-content">
+      <div style="text-align:center;padding:60px 20px;color:var(--sub);">Select a card from the list to preview</div>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── STATE ───────────────────────────────────────────────
+let cards = JSON.parse(localStorage.getItem('dumore_cards') || '[]');
+let photoData = null;
+let currentCardId = null;
+let qrInstance = null;
+
+// ─── ICONS ───────────────────────────────────────────────
+const ICONS = {
+  phone: `<svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.8a19.79 19.79 0 01-3.07-8.68A2 2 0 012 .96h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 8.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>`,
+  email: `<svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>`,
+  web: `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>`,
+  location: `<svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>`,
+  linkedin: `<svg viewBox="0 0 24 24"><path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>`,
+};
+
+// ─── HELPERS ──────────────────────────────────────────────
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+function saveCards() { localStorage.setItem('dumore_cards', JSON.stringify(cards)); }
+function toast(msg, dur = 2200) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), dur);
+}
+function getField(id) { return document.getElementById(id)?.value?.trim() || ''; }
+function initials(first, last) { return ((first[0]||'')+(last[0]||'')).toUpperCase() || 'D'; }
+
+// ─── VIEW SWITCH ─────────────────────────────────────────
+function showView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach((t, i) => {
+    t.classList.toggle('active', ['creator','cards','preview'][i] === name);
+  });
+  document.getElementById('view-' + name).classList.add('active');
+  if (name === 'cards') renderCardsList();
+}
+
+// ─── PHOTO ───────────────────────────────────────────────
+function handlePhoto(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    photoData = ev.target.result;
+    const pp = document.getElementById('photo-preview');
+    pp.innerHTML = `<img src="${photoData}" style="width:100%;height:100%;object-fit:cover;">`;
+    updatePreview();
+  };
+  reader.readAsDataURL(file);
+}
+
+// ─── PREVIEW CARD (mini, inside phone) ───────────────────
+function updatePreview() {
+  const first = getField('f-first'), last = getField('f-last');
+  const title = getField('f-title'), div = getField('f-div');
+  const phone = getField('f-phone'), email = getField('f-email');
+  const web = getField('f-web'), loc = getField('f-loc');
+  const bio = getField('f-bio'), linkedin = getField('f-linkedin');
+  const ini = initials(first||'D', last||'E');
+  const avatarHtml = photoData
+    ? `<div class="card-avatar"><img src="${photoData}"></div>`
+    : `<div class="card-avatar">${ini}</div>`;
+
+  let contactHtml = '';
+  if (phone) contactHtml += contactItem(ICONS.phone, 'Phone', phone);
+  if (email) contactHtml += contactItem(ICONS.email, 'Email', email);
+  if (web) contactHtml += contactItem(ICONS.web, 'Website', web);
+  if (loc) contactHtml += contactItem(ICONS.location, 'Location', loc);
+
+  document.getElementById('card-preview-inner').innerHTML = `
+    <div class="card-hero">
+      <div class="card-logo-row">
+        <svg width="18" height="18" viewBox="0 0 36 36" fill="none"><rect x="2" y="2" width="32" height="32" rx="4" stroke="#c8a84b" stroke-width="2"/><text x="18" y="25" text-anchor="middle" fill="#c8a84b" font-family="serif" font-size="18" font-weight="bold">D</text></svg>
+        <span class="card-company">Dumore Enterprises</span>
+      </div>
+      ${avatarHtml}
+      <div class="card-name">${first||'Your'} ${last||'Name'}</div>
+      ${title ? `<div class="card-title-div">${title}</div>` : ''}
+      ${div ? `<div class="card-sub-div">${div}</div>` : ''}
+    </div>
+    <div class="card-actions">
+      <div class="card-btn primary">Save Contact</div>
+      <div class="card-btn secondary">Share</div>
+    </div>
+    ${bio ? `<div class="card-bio">${bio}</div>` : ''}
+    <div class="card-contact">${contactHtml}</div>
+  `;
+}
+
+function contactItem(icon, label, value) {
+  return `<div class="contact-item">
+    <div class="contact-icon">${icon}</div>
+    <div class="contact-text"><div class="contact-label">${label}</div>${value}</div>
+  </div>`;
+}
+
+// ─── SAVE CARD ───────────────────────────────────────────
+function saveCard() {
+  const first = getField('f-first'), last = getField('f-last');
+  if (!first && !last) { toast('⚠ Please enter at least a name'); return; }
+  const id = currentCardId || uid();
+  const card = {
+    id, first, last,
+    title: getField('f-title'), division: getField('f-div'),
+    bio: getField('f-bio'), phone: getField('f-phone'),
+    email: getField('f-email'), web: getField('f-web'),
+    linkedin: getField('f-linkedin'), location: getField('f-loc'),
+    photo: photoData, created: Date.now(),
+  };
+  const idx = cards.findIndex(c => c.id === id);
+  if (idx >= 0) cards[idx] = card; else cards.push(card);
+  saveCards();
+  currentCardId = id;
+  generateQR(card);
+  toast('✓ Card saved!');
+}
+
+// ─── QR CODE ─────────────────────────────────────────────
+function generateQR(card) {
+  const panel = document.getElementById('qr-panel');
+  panel.style.display = 'block';
+
+  // Simulate a shareable URL — in production this would be your real domain
+  const base = window.location.href.split('?')[0];
+  const url = `${base}?card=${card.id}`;
+  document.getElementById('qr-url-display').textContent = url;
+
+  const container = document.getElementById('qr-container');
+  container.innerHTML = '';
+  qrInstance = new QRCode(container, {
+    text: url,
+    width: 180, height: 180,
+    colorDark: '#0d1526',
+    colorLight: '#ffffff',
+    correctLevel: QRCode.CorrectLevel.H,
+  });
+}
+
+function downloadQR() {
+  const canvas = document.querySelector('#qr-container canvas');
+  if (!canvas) { toast('Generate a card first'); return; }
+  // Create download with white padding
+  const out = document.createElement('canvas');
+  out.width = out.height = 220;
+  const ctx = out.getContext('2d');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, 220, 220);
+  ctx.drawImage(canvas, 20, 20, 180, 180);
+  const a = document.createElement('a');
+  a.download = `dumore-card-qr.png`;
+  a.href = out.toDataURL('image/png');
+  a.click();
+  toast('✓ QR downloaded');
+}
+
+function copyCardUrl() {
+  const url = document.getElementById('qr-url-display').textContent;
+  navigator.clipboard.writeText(url).then(() => toast('✓ Link copied'));
+}
+
+// ─── CARDS LIST ───────────────────────────────────────────
+function renderCardsList() {
+  const grid = document.getElementById('cards-grid');
+  if (!cards.length) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+      No cards yet. Create your first one!
+    </div>`;
+    return;
+  }
+  grid.innerHTML = cards.map(c => `
+    <div class="card-entry">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="width:40px;height:40px;border-radius:50%;background:#1a2640;border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:16px;color:var(--gold);overflow:hidden;flex-shrink:0;">
+          ${c.photo ? `<img src="${c.photo}" style="width:40px;height:40px;object-fit:cover;">` : initials(c.first||'D',c.last||'E')}
+        </div>
+        <div>
+          <div class="card-entry-name">${c.first} ${c.last}</div>
+          <div class="card-entry-title">${c.title||''}</div>
+          <div class="card-entry-div">${c.division||''}</div>
+        </div>
+      </div>
+      <div class="card-entry-actions">
+        <button class="card-entry-btn" onclick="editCard('${c.id}')">Edit</button>
+        <button class="card-entry-btn" onclick="showPublicView('${c.id}')">Preview</button>
+        <button class="card-entry-btn" onclick="showQRFor('${c.id}')">QR</button>
+        <button class="card-entry-btn del" onclick="deleteCard('${c.id}')">Delete</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function editCard(id) {
+  const c = cards.find(c => c.id === id); if (!c) return;
+  currentCardId = id; photoData = c.photo || null;
+  document.getElementById('f-first').value = c.first||'';
+  document.getElementById('f-last').value = c.last||'';
+  document.getElementById('f-title').value = c.title||'';
+  document.getElementById('f-div').value = c.division||'Executive / Corporate';
+  document.getElementById('f-bio').value = c.bio||'';
+  document.getElementById('f-phone').value = c.phone||'';
+  document.getElementById('f-email').value = c.email||'';
+  document.getElementById('f-web').value = c.web||'';
+  document.getElementById('f-linkedin').value = c.linkedin||'';
+  document.getElementById('f-loc').value = c.location||'';
+  const pp = document.getElementById('photo-preview');
+  if (c.photo) pp.innerHTML = `<img src="${c.photo}" style="width:100%;height:100%;object-fit:cover;">`;
+  else pp.textContent = initials(c.first||'D', c.last||'E');
+  updatePreview();
+  showView('creator');
+}
+
+function showQRFor(id) {
+  const c = cards.find(c => c.id === id); if (!c) return;
+  editCard(id);
+  generateQR(c);
+  setTimeout(() => { document.getElementById('qr-panel').scrollIntoView({ behavior: 'smooth' }); }, 200);
+}
+
+function deleteCard(id) {
+  if (!confirm('Delete this card?')) return;
+  cards = cards.filter(c => c.id !== id);
+  saveCards();
+  renderCardsList();
+  toast('Card deleted');
+}
+
+// ─── PUBLIC CARD VIEW ────────────────────────────────────
+function showPublicView(id) {
+  const c = cards.find(c => c.id === id);
+  if (!c) { toast('Card not found'); return; }
+  const ini = initials(c.first||'D', c.last||'E');
+  const avatarHtml = c.photo
+    ? `<div class="pub-avatar"><img src="${c.photo}"></div>`
+    : `<div class="pub-avatar">${ini}</div>`;
+
+  // Build vCard for download
+  const vcard = `BEGIN:VCARD\nVERSION:3.0\nN:${c.last};${c.first};;;\nFN:${c.first} ${c.last}\nORG:Dumore Enterprises Limited\nTITLE:${c.title||''}\nTEL;TYPE=WORK,VOICE:${c.phone||''}\nEMAIL;TYPE=INTERNET:${c.email||''}\nURL:${c.web||''}\nADR;TYPE=WORK:;;${c.location||''};;;;\nEND:VCARD`;
+  const vcardUri = 'data:text/vcard;charset=utf-8,' + encodeURIComponent(vcard);
+
+  let contactHtml = '';
+  if (c.phone) contactHtml += pubItem('tel:'+c.phone, ICONS.phone, 'Phone', c.phone);
+  if (c.email) contactHtml += pubItem('mailto:'+c.email, ICONS.email, 'Email', c.email);
+  if (c.web) contactHtml += pubItem('https://'+c.web.replace(/^https?:\/\//,''), ICONS.web, 'Website', c.web);
+  if (c.linkedin) contactHtml += pubItem('https://'+c.linkedin.replace(/^https?:\/\//,''), ICONS.linkedin, 'LinkedIn', c.linkedin);
+  if (c.location) contactHtml += pubItem('#', ICONS.location, 'Location', c.location);
+
+  document.getElementById('public-card-content').innerHTML = `
+    <div class="pub-hero">
+      <div class="pub-logo-row">
+        <svg width="22" height="22" viewBox="0 0 36 36" fill="none"><rect x="2" y="2" width="32" height="32" rx="4" stroke="#c8a84b" stroke-width="2"/><text x="18" y="25" text-anchor="middle" fill="#c8a84b" font-family="serif" font-size="18" font-weight="bold">D</text></svg>
+        <span class="pub-company">Dumore Enterprises</span>
+      </div>
+      ${avatarHtml}
+      <div class="pub-name">${c.first} ${c.last}</div>
+      ${c.title ? `<div class="pub-title">${c.title}</div>` : ''}
+      ${c.division ? `<div class="pub-div">${c.division}</div>` : ''}
+    </div>
+    <div class="pub-actions">
+      <a href="${vcardUri}" download="${c.first}-${c.last}.vcf" class="pub-btn primary">Save Contact</a>
+      <button class="pub-btn secondary" onclick="shareCard('${c.id}')">Share Card</button>
+    </div>
+    ${c.bio ? `<div class="pub-bio">${c.bio}</div>` : ''}
+    <div class="divider"></div>
+    <div class="pub-contact">${contactHtml}</div>
+    <div class="pub-footer">
+      <div class="pub-footer-logo">
+        <svg width="20" height="20" viewBox="0 0 36 36" fill="none"><rect x="2" y="2" width="32" height="32" rx="4" stroke="#c8a84b" stroke-width="2" opacity="0.5"/><text x="18" y="25" text-anchor="middle" fill="#c8a84b" font-family="serif" font-size="18" font-weight="bold" opacity="0.5">D</text></svg>
+        <span class="pub-footer-text">Dumore Enterprises Limited</span>
+      </div>
+      <div style="font-size:11px;color:var(--sub);opacity:0.5;margin-top:6px;">Port of Spain, Trinidad &amp; Tobago</div>
+    </div>
+  `;
+  showView('preview');
+}
+
+function pubItem(href, icon, label, value) {
+  const tag = href === '#' ? 'div' : 'a';
+  const attr = href !== '#' ? `href="${href}" target="_blank" rel="noopener"` : '';
+  return `<${tag} class="pub-item" ${attr}>
+    <div class="pub-icon">${icon}</div>
+    <div><div class="pub-item-label">${label}</div><div class="pub-item-value">${value}</div></div>
+  </${tag}>`;
+}
+
+function shareCard(id) {
+  const base = window.location.href.split('?')[0];
+  const url = `${base}?card=${id}`;
+  if (navigator.share) {
+    navigator.share({ title: 'Dumore Business Card', url });
+  } else {
+    navigator.clipboard.writeText(url).then(() => toast('✓ Card link copied!'));
+  }
+}
+
+// ─── INIT ─────────────────────────────────────────────────
+updatePreview();
+
+// Check URL param for direct card link
+const urlParams = new URLSearchParams(window.location.search);
+const directCard = urlParams.get('card');
+if (directCard && cards.find(c => c.id === directCard)) {
+  document.getElementById('main-nav').style.display = 'none';
+  showPublicView(directCard);
+}
+</script>
+</body>
+</html>
